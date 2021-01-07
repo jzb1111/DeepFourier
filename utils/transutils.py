@@ -50,6 +50,7 @@ def genellipse(a,b,l,size):
     return pic
 
 def fourier_fit(pic,n):#目前只处理一个轮廓contours[0]
+    #输入为二值图像
     pic=copy(pic)
     pic=pic.astype(np.uint8)
     res=[]
