@@ -34,6 +34,28 @@ objdict={
 'train':18,
 'tvmonitor':19}
 
+class_color={
+0:[128,0,0],
+1:[0,128,0],
+2:[128,128,0],
+3:[0,0,128],
+4:[128,0,128],
+5:[0,128,128],
+6:[128,128,128],
+7:[64,0,0],
+8:[192,0,0],
+9:[64,128,0],
+10:[192,128,0],
+11:[64,0,128],
+12:[192,0,128],
+13:[64,128,128],
+14:[192,128,128],
+15:[0,64,0],
+16:[128,64,0],
+17:[0,192,0],
+18:[128,192,0],
+19:[0,64,128]}
+
 def load_path(dirname):
     result = []#所有的文件
     for maindir, subdir, file_name_list in os.walk(dirname):
@@ -52,17 +74,20 @@ def load_raw_data_by_num(num):
     image_paths=[]
     segment_paths=[]
     annotation_paths=[]
+    segclass_paths=[]
     segments=load_path("./VOC2007/SegmentationObject")
     for i in segments:
         image_paths.append('./VOC2007/JPEGImages'+'/'+i.replace('png','jpg'))
         segment_paths.append('./VOC2007/SegmentationObject'+'/'+i)
+        segclass_paths.append('./VOC2007/SegmentationClass'+'/'+i)
         annotation_paths.append('./VOC2007/Annotations'+'/'+i.replace('png','xml'))
     #print(image_paths)
     #print(segment_paths)
     image=cv2.resize(cv2.imread(image_paths[num]),(256,256))
     segment=cv2.resize(cv2.imread(segment_paths[num]),(256,256))
+    segclass=cv2.resize(cv2.imread(segclass_paths[num]),(256,256))
     annotation=annotation_paths[num]
-    return image,segment,annotation
+    return image,segment,segclass,annotation
 
 def load_xml_list(annotation_path):
     DOMTree = xml.dom.minidom.parse(annotation_path)
@@ -87,24 +112,57 @@ def load_xml_list(annotation_path):
     return objlist
 
 def trans_seg_to_list(seg,ann):
+    #逻辑梳理：
+    #1.生成zeromat
+    #2.在segclass中查找box中类别所对应颜色的像素集合
+    #3.在segobj中查找box中不同颜色的像素集合，挑选与segclass重合度最高的将zeromat对应位置置一
+    #4.运行findcontours，查找出一系列轮廓（一个目标可能有多组轮廓）
+    
+    #期待输出：
+    #[[obj1[obj1part1[y1,x1],[y2,x2]...][obj1part2[...]...]][obj2[...]...]...]
     objlist=load_xml_list(ann)
     objlinelist=[]
-    grayseg=cv2.cvtColor(seg,cv2.COLOR_RGB2GRAY)
-    binseg=cv2.threshold(grayseg,10,1,cv2.THRESH_BINARY)[1]
+    #grayseg=cv2.cvtColor(seg,cv2.COLOR_RGB2GRAY)
+    #binseg=cv2.threshold(grayseg,10,1,cv2.THRESH_BINARY)[1]
     zlis=[]
+    objcolorlist=[]
     for n in range(len(objlist)):
         xmin=objlist[n][1][0]
         ymin=objlist[n][1][1]
         xmax=objlist[n][1][2]
         ymax=objlist[n][1][3]
-        
-        zeroimg=np.zeros((len(binseg),len(binseg[0])))
+        colordict={}
+        zeroimg=np.zeros((len(seg),len(seg[0])))
+        #查找segobj的box中不同颜色的集合
         for i in range(ymax-ymin):
             for j in range(xmax-xmin):
-                color=binseg[ymin+i][xmin+j]
-                if color > 0.5:
-                    zeroimg[ymin+i][xmin+j]=1
+                color=[]
+                for k in range(3):
+                    color.append(seg[ymin+i][xmin+j][k])
+                color=tuple(color)
+                if color not in colordict.keys():
+                    colordict[color]=np.zeros((256,256))
+                    colordict[color][i][j]=1
+                else:
+                    colordict[color][i][j]=1
+        #查找segclass中box中类别所对应的颜色区域
+        anncolor=class_color[objlist[n][0]]
+        anncolormat=np.zeros((256,256))
+        for i in range(ymax-ymin):
+            for j in range(xmax-xmin):
+                color=[]
+                for k in range(3):
+                    color.append(seg[ymin+i][xmin+j][k])
+                color=color
+                if color==anncolor:
+                    anncolormat[i][j]=1
+        
+        colordictlis=[]
+        for i in range(len(colordict.keys())):
+            colordictlis.append([list(colordict.keys())[i],colordict[list(colordict.keys())[i]]])
+        colordictlis=sorted(colordictlis,key=lambda x: x[1],reverse=True)    
         plt.figure(n)
         plt.imshow(zeroimg)
         zlis.append(zeroimg)
+    
     return zlis
