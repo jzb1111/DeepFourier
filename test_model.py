@@ -5,10 +5,8 @@ Created on Thu Jul  4 18:29:14 2019
 @author: ADMIN
 """
 
-from run_model import run_rpn,run_fasthead,run_fasthead_nms,run_fast_ft
-#from support.read_data import get_batch_by_num,generate_box,correct_box
-from utils.datautil import gen_train_ft_list,generate_fasthead_train_sample_v2,file_name,load_train_data,generate_box,correct_box,load_train_data
-from utils.transutils import draw_fourier
+from run_model import run_rpn,run_fasthead,run_fasthead_nms
+from support.read_data import get_batch_by_num,generate_box,correct_box,load_train_data,load_raw_data_by_num
 from ROI_pool import roi_box
 from runNMS import run_nms
 import cv2
@@ -57,7 +55,7 @@ def draw_s_box(pd,s_box):
 
 def draw_v_box(pd,s_box,clsv,regv):#还缺少一个nms
     im=pd[0]
-    regv=np.reshape(regv,[-1,4])
+    regv=np.reshape(regv,[-1,21,4])
     cls_lis={}
     cls_box={}
     for i in range(20):
@@ -95,24 +93,95 @@ def draw_v_box(pd,s_box,clsv,regv):#还缺少一个nms
                 cv2.rectangle(im,(ltw,lth),(rbw,rbh),(0,255,0),2)
     return im     
 
-
-def show_ft(clsv,regv,ftv):
+def draw_v_box_for_train(pd,s_box,clsv,regv):#还缺少一个nms
+    im=pd[0]
+    regv=np.reshape(regv,[-1,4])
+    cls_lis={}
+    cls_box={}
+    for i in range(2):
+        cls_lis[i]=[]
+        cls_box[i]=[]
     for i in range(len(clsv)):
-        if clsv[i][0]>clsv[i][1]:
-            ftimage=draw_fourier(ftv[i],100,[224,224])
-            plt.figure(i)
-            plt.imshow(ftimage)
+        if clsv[i][0]-clsv[i][1]>0:
+            clsvn=np.argmax(clsv[i])
+            tmpbox=s_box[i]
+            regs=regv[i]
+            cor_box=correct_box(tmpbox,regs)
+            #lth=cor_box[0]
+            #ltw=cor_box[1]
+            #rbh=cor_box[2]
+            #rbw=cor_box[3]
+            cls_lis[clsvn].append(clsv[i][clsvn])
+            cls_box[clsvn].append(cor_box)
+    #print(cls_lis)
+    for i in range(len(cls_lis)):
+        if len(cls_lis[i])>0:
+            boxlistmp=cls_box[i]
+            conflist=cls_lis[i]
+            #print(boxlistmp)
+            #print(conflist)
+            maxoutput=10
+            iouthreshold=0.2
+            cor_boxlis=run_nms(boxlistmp,conflist,maxoutput,iouthreshold)
+            
+    return cor_boxlis   
 
-num=200
 
-pd,ocs,ors,no,rn,obj_line_list,annotation_path=load_train_data(0)
+def draw_v_box_v2(pd,s_box,clsv,regv):#还缺少一个nms
+    im=pd[0]
+    regv=np.reshape(regv,[-1,4])
+    cls_lis={}
+    cls_box={}
+    for i in range(2):
+        cls_lis[i]=[]
+        cls_box[i]=[]
+    for i in range(len(clsv)):
+        if clsv[i][0]-clsv[i][1]>0:
+            clsvn=np.argmax(clsv[i])
+            tmpbox=s_box[i]
+            regs=regv[i]
+            cor_box=correct_box(tmpbox,regs)
+            #lth=cor_box[0]
+            #ltw=cor_box[1]
+            #rbh=cor_box[2]
+            #rbw=cor_box[3]
+            cls_lis[clsvn].append(clsv[i][clsvn])
+            cls_box[clsvn].append(cor_box)
+    #print(cls_lis)
+    for i in range(len(cls_lis)):
+        if len(cls_lis[i])>0:
+            boxlistmp=cls_box[i]
+            conflist=cls_lis[i]
+            #print(boxlistmp)
+            #print(conflist)
+            maxoutput=10
+            iouthreshold=0.3
+            cor_boxlis=run_nms(boxlistmp,conflist,maxoutput,iouthreshold)
+            for j in range(len(cor_boxlis)):
+                cor_box=cor_boxlis[j]
+                lth=cor_box[0]
+                ltw=cor_box[1]
+                rbh=cor_box[2]
+                rbw=cor_box[3]
+                cv2.putText(im,'target',(ltw,lth),cv2.FONT_HERSHEY_SIMPLEX,1,(0,255,0),1)
+                cv2.rectangle(im,(ltw,lth),(rbw,rbh),(0,255,0),2)
+    return im     
+
+num=2
+
+#ld,pd=get_batch_by_num(num)
+#pd,ocs,ors,no,rn,gld=load_train_data(num)
+pd,segment,segclass,annotation=load_raw_data_by_num(num)
+pd=np.array([pd])
 pd=pd.astype(np.float32)
-clsmap,regmap=run_rpn(pd)
+rp=run_rpn(pd)
+rp.start()
+#print
+clsmap,regmap=rp.run_mod()
 
 roib=roi_box(clsmap,regmap)
-selected_anchor,selected_boxes=roib._build_model()
+selected_boxes=roib._build_model()
 selected_boxes=np.array(selected_boxes).astype(np.int32)
-selected_anchor=np.array(selected_anchor).astype(np.int32)
 
 #drb=draw_rpn_box(pd,clsmap,regmap)
 #plt.figure(0)
@@ -125,14 +194,12 @@ selected_anchor=np.array(selected_anchor).astype(np.int32)
 #plt.figure(1)
 #plt.imshow(dsb/255)
 
+rf=run_fasthead(pd,selected_boxes)
+rf.start()
+clsv,regv=rf.run_mod()
 
-clsv,regv=run_fasthead(pd,selected_boxes)
-ftv=run_fast_ft(pd,selected_anchor)
-show_ft(clsv,regv,ftv)
-#dvb=draw_v_box(pd,selected_boxes,clsv,regv)
-#for i in range(len())
-#ift=draw_fourier()
-#plt.imshow(dvb/255)
+dvb=draw_v_box_v2(pd,selected_boxes,clsv,regv)
+plt.imshow(dvb/255)
 #clsn,box=run_fasthead_nms(clsv,regv,selected_boxes)
 
 #draw_box(pd,boxes)

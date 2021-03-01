@@ -1,1 +1,0 @@
-file 'file:E:/paper/fourierDeepLearning/media/videos/gen_animation/1440p60/partial_movie_files/DtFourierScene/00000.mp4'

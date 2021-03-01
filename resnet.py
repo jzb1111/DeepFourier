@@ -1,10 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Fri Jan 22 08:36:55 2021
-
-@author: asus
-"""
-
 import tensorflow as tf
 import tensorflow.contrib as tc
 
@@ -26,15 +19,15 @@ class ResNet():
 									stride=2,padding='VALID',normalizer_fn=self.normalizer,
 									normalizer_params=self.bn_params)#112
 			#output=tc.layers.max_pool2d(output,[3,3],2,padding='SAME')#56
-		output=self.res_block(output,[64,64],'conv2_x',3,first_block=True)#56
+		output1=self.res_block(output,[64,64],'conv2_x',3,first_block=True)#112
 		print(output)
-		output=self.res_block(output,[128,128],'conv3_x',4)#28
+		output2=self.res_block(output1,[128,128],'conv3_x',4)#56
 		print(output)
-		output=self.res_block(output,[256,256],'conv4_x',6)#14
+		output3=self.res_block(output2,[256,256],'conv4_x',6)#28
 		print(output)
-		output=self.res_block(output,[512,512],'conv5_x',3)#7
+		output4=self.res_block(output3,[512,512],'conv5_x',3)#14
 		
-		return output
+		return output2,output3,output4
 		
 		
 		

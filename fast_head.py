@@ -15,7 +15,7 @@ class fasthead():
         #self.boxes=boxes
         
     def _build_model_(self):
-        self.rois=tf.reshape(self.rois,[-1,25*512])
+        self.rois=tf.reshape(self.rois,[-1,3000])#25*512])
         #self.rois=tf.reshape(self.rois,[1,-1])
         bfc=self.base_fc(self.rois)
         clsv=self.cls_vector(bfc)

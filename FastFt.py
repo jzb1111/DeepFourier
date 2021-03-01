@@ -15,7 +15,7 @@ class fast_ft():
         #self.boxes=boxes
         
     def _build_model_(self):
-        self.rois=tf.reshape(self.rois,[-1,25*512])
+        self.rois=tf.reshape(self.rois,[-1,3000])
         #self.rois=tf.reshape(self.rois,[1,-1])
         bfc=self.base_fc(self.rois)
         clsv=self.cls_vector(bfc)
@@ -28,8 +28,8 @@ class fast_ft():
         return out
     
     def cls_vector(self,vector):
-        out=tc.layers.fully_connected(vector,202)
-        out=tf.reshape(out,[-1,101,2])
+        out=tc.layers.fully_connected(vector,22)
+        out=tf.reshape(out,[-1,11,2])
         #out=tf.nn.softmax(out)
         #output=tf.reshape(tf.nn.softmax(tf.reshape(output,(-1,2))),(-1,28,28,2))
         return out

@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
 """
-Created on Sat Jan 23 16:13:11 2021
+Created on Wed Jun 19 16:45:28 2019
 
-@author: asus
+@author: ADMIN
 """
 
 import numpy as np
 import tensorflow as tf
+import tensorflow.contrib as tc
 from runNMS import run_nms
 #from runGFV import run_GFV
 from GFV_for_train import gfv
@@ -128,9 +129,47 @@ class ROIs_v2():
         rois=tf.image.crop_and_resize(self.xs,t_box,box_ind=ind,crop_size=[5,5],method='bilinear')
         rois=tf.reshape(rois,[-1,25*512])
         return rois
+            
+class ROIs_v3():
+    #我们假设rpn产生的两个特征图直接传给roi
+    #输入xs[1,14,14,512]tf
+    #    boxes[-1,4]
+    def __init__(self,xs0,xs1,xs2,boxes):
+        self.xs0=xs0
+        self.xs1=xs1
+        self.xs2=xs2
+        self.boxes=boxes
         
+    def _build_model(self):
+        #num,hei,wid,cha=self.xs.shape
         
-
+        rois0=self.generate_rois(self.xs0,self.boxes,128)
+        rois0=tc.layers.fully_connected(rois0,500)
+        
+        rois1=self.generate_rois(self.xs1,self.boxes,256)
+        rois1=tc.layers.fully_connected(rois1,1000)
+        #print('rois1',rois1)
+        rois2=self.generate_rois(self.xs2,self.boxes,512)
+        rois2=tc.layers.fully_connected(rois2,1500)
+        #print('rois2',rois2)
+        rois=tf.concat([rois0,rois1,rois2],axis=1)
+        rois=tf.reshape(rois,[-1,3000])
+        return rois
+    
+    def generate_rois(self,xs,boxes,channels):#boxes[N,4]
+        #num,le=boxes.shape
+        boxes=tf.to_float(boxes)
+        
+        lefttop_h=boxes[:,0]/224#N
+        lefttop_w=boxes[:,1]/224#N
+        rightbottom_h=boxes[:,2]/224#N
+        rightbottom_w=boxes[:,3]/224#N
+        
+        t_box=tf.stack([lefttop_h,lefttop_w,rightbottom_h,rightbottom_w],axis=1)
+        ind=tf.to_int32(tf.zeros_like(lefttop_h))
+        rois=tf.image.crop_and_resize(xs,t_box,box_ind=ind,crop_size=[5,5],method='bilinear')
+        rois=tf.reshape(rois,[-1,25*channels])
+        return rois
     
 class roi_box():#np,np
     def __init__(self,rpn_cls,rpn_reg):
@@ -142,14 +181,12 @@ class roi_box():#np,np
         wid=14
         cha=9
         clsconf=self.calc_conf()#[14,14,9]
-        anchorlist,boxlist,conflist=self.calc_anchorbox(clsconf,hei,wid,cha)
-        anchorlist=np.array(anchorlist).astype(np.float32)
+        boxlist,conflist=self.calc_anchorbox(clsconf,hei,wid,cha)
         boxlist=np.array(boxlist).astype(np.float32)
         conflist=np.array(conflist).astype(np.float32)
-        anchorlist,selected_boxes=run_nms(anchorlist,boxlist,conflist,200,0.8)#改变iou不知道会有什么后果
-        anchorlist=self.split_box(anchorlist)
+        selected_boxes=run_nms(boxlist,conflist,800,0.9)#改变iou不知道会有什么后果0.8 for train,0.3 for test
         selected_boxes=self.split_box(selected_boxes)
-        return anchorlist,selected_boxes
+        return selected_boxes
     
     def calc_conf(self):
         out=self.rpn_cls[0,:,:,:,0]-self.rpn_cls[0,:,:,:,1]#out[14,14,9]
@@ -235,24 +272,17 @@ class roi_box():#np,np
         
         boxlist=[]
         conflist=[]
-        anchorlist=[]
-        #anchorboxes=[]
         for i in range(1000):
             hei=sortcls[i][1][0]
             wid=sortcls[i][1][1]
             cha=sortcls[i][1][2]
             conf=sortcls[i][0]
             anchorboxestmp=self.generate_anchorbox(hei,wid,cha)
-            #anchorlist.append(anchorboxestmp)
             reginf=self.rpn_reg[0][hei][wid][cha]
             #print(anchorboxestmp,'anchor')
             #print(reginf,'reginf')
             box=self.correct_box(anchorboxestmp,reginf)
             if box[0]>=0 and box[0]<=223 and box[1]>=0 and box[1]<=223 and box[2]>=0 and box[2]<=223 and box[3]>=0 and box[3]<=223:
                 boxlist.append(box)
-                anchorlist.append(box)
                 conflist.append(conf)
-            #if anchorboxestmp[0]>=0 and anchorboxestmp[0]<=223 and anchorboxestmp[1]>=0 and anchorboxestmp[1]<=223 and anchorboxestmp[2]>=0 and anchorboxestmp[2]<=223 and anchorboxestmp[3]>=0 and anchorboxestmp[3]<=223:
-                #anchorlist.append(box)
-                #conflist.append(conf)
-        return anchorlist,boxlist,conflist
+        return boxlist,conflist

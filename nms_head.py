@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Created on Tue Jun 25 10:49:42 2019
+Created on Fri Jul 12 10:19:07 2019
 
 @author: ADMIN
 """
@@ -27,6 +27,3 @@ with tf.Session() as sess:
     #print(sess.graph)
     with tf.gfile.FastGFile('./nms.pb', mode = 'wb') as f:
         f.write(output_graph_def.SerializeToString())
-    #builder = tf.saved_model.builder.SavedModelBuilder('./model/nmsmodel/')
-    #builder.add_meta_graph_and_variables(sess, ['tag_string'])
-    #builder.save()
