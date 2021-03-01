@@ -109,6 +109,8 @@ update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
 with tf.control_dependencies(update_ops):
     train_step = tf.train.GradientDescentOptimizer(lr).minimize(totalloss)
     train_rpn=tf.train.GradientDescentOptimizer(lr).minimize(rpnloss)
+    train_ft=tf.train.GradientDescentOptimizer(lr).minimize(fastftloss)
+    train_fastrcnn=tf.train.GradientDescentOptimizer(lr).minimize(rpnloss+fastheadloss)
     
 r,d,files=file_name('./VOC2007/SegmentationObject/')
 
@@ -147,13 +149,15 @@ with tf.Session(config=config) as sess:
         fs_boxes=draw_v_box_for_train(pd,s_boxes,eva_fasth_cls,eva_fasth_reg)
         gtft=gen_train_ft_list_v2(ftline,fs_boxes,gld)#第50项除以50
         #3ftloss=sess.run(fastftloss,={xs:pd,})
-        if len(gtft)==0:
-            flag=0
+        if len(gtft)==0 and flag==1:
+            flag=2
+        if len(gtft)!=0 and flag==1:
+            flag=3
         '''if flag==1:
             sanftloss=sess.run(fastftloss,feed_dict={xs:pd,gt_ft:gtft,evalft_boxes:fs_boxes})
             if sanftloss>30:
                 flag=0'''
-        if flag==1:
+        if flag==3:
             
             gtclsv=gtclsv.astype(np.float32)
             gtregv=gtregv.astype(np.float32)
@@ -178,17 +182,27 @@ with tf.Session(config=config) as sess:
             threetotalloss=sess.run(totalloss,feed_dict={xs:pd,gt_rpncls:ocs,gt_rpnreg:ors,gt_clsno:no,gt_regno:rn,eval_boxes:s_boxes,gt_clsv:gtclsv,gt_regv:gtregv,gt_clsvn:clsvno,gt_regvn:regvno,gt_ft:gtft,evalft_boxes:fs_boxes})
             threeftloss=threetotalloss-twofhregloss-twofhclsloss-onerpnregloss-onerpnclsloss
             print(i)
-            print(threetotalloss,onerpnclsloss,onerpnregloss,twofhclsloss,twofhregloss,threeftloss)
+            print(onerpnclsloss,onerpnregloss,twofhclsloss,twofhregloss,threeftloss)
             #break
             
-        else:
+        elif flag==2 or flag==1:
             print('no pos')
-            sess.run(train_rpn,feed_dict={xs:pd,gt_rpncls:ocs,gt_rpnreg:ors,gt_clsno:no,gt_regno:rn})
-            print(i)
+            sess.run(train_fastrcnn,feed_dict={xs:pd,gt_rpncls:ocs,gt_rpnreg:ors,gt_clsno:no,gt_regno:rn,eval_boxes:s_boxes,gt_clsv:gtclsv,gt_regv:gtregv,gt_clsvn:clsvno,gt_regvn:regvno})
             onerpnclsloss=sess.run(rpnclsloss,feed_dict={xs:pd,gt_rpncls:ocs,gt_rpnreg:ors,gt_clsno:no,gt_regno:rn})
             onerpnregloss=sess.run(rpnregloss,feed_dict={xs:pd,gt_rpncls:ocs,gt_rpnreg:ors,gt_clsno:no,gt_regno:rn})
-            print(onerpnclsloss+onerpnregloss,onerpnclsloss,onerpnregloss)
-        
+            twofhclsloss=sess.run(fastheadclsloss,feed_dict={xs:pd,eval_boxes:s_boxes,gt_clsv:gtclsv,gt_regv:gtregv,gt_clsvn:clsvno,gt_regvn:regvno})
+            twofhregloss=sess.run(fastheadregloss,feed_dict={xs:pd,eval_boxes:s_boxes,gt_clsv:gtclsv,gt_regv:gtregv,gt_clsvn:clsvno,gt_regvn:regvno})
+            #threetotalloss=sess.run(totalloss,feed_dict={xs:pd,gt_rpncls:ocs,gt_rpnreg:ors,gt_clsno:no,gt_regno:rn,eval_boxes:s_boxes,gt_clsv:gtclsv,gt_regv:gtregv,gt_clsvn:clsvno,gt_regvn:regvno,gt_ft:gtft,evalft_boxes:fs_boxes})
+            #threeftloss=threetotalloss-twofhregloss-twofhclsloss-onerpnregloss-onerpnclsloss
+            print(i)
+            print(onerpnclsloss,onerpnregloss,twofhclsloss,twofhregloss,threeftloss)
+        elif flag==0:
+            print('no pos')
+            sess.run(train_rpn,feed_dict={xs:pd,gt_rpncls:ocs,gt_rpnreg:ors,gt_clsno:no,gt_regno:rn})
+            onerpnclsloss=sess.run(rpnclsloss,feed_dict={xs:pd,gt_rpncls:ocs,gt_rpnreg:ors,gt_clsno:no,gt_regno:rn})
+            onerpnregloss=sess.run(rpnregloss,feed_dict={xs:pd,gt_rpncls:ocs,gt_rpnreg:ors,gt_clsno:no,gt_regno:rn})
+            print(i)
+            print(onerpnclsloss,onerpnregloss)
         if i%10000==0:
             output_graph_def1=tf.graph_util.convert_variables_to_constants(sess,sess.graph_def,output_node_names=['clsmap','regmap'])#sess.graph_def
             output_graph_def2=tf.graph_util.convert_variables_to_constants(sess,sess.graph_def,output_node_names=['clsv','regv'])#sess.graph_def
