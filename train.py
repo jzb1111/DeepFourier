@@ -102,7 +102,7 @@ fastheadregloss=fasthead_reg_loss(regv,gt_regv,gt_regvn)
 
 fastheadloss=fastheadclsloss+fastheadregloss
 
-fastftloss=fast_ft_loss(ftv_,gt_ft)/50
+fastftloss=fast_ft_loss(ftv_,gt_ft)
 
 totalloss=rpnloss+fastheadloss+fastftloss
 update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
@@ -186,7 +186,7 @@ with tf.Session(config=config) as sess:
             #break
             
         elif flag==2 or flag==1:
-            print('no pos')
+            print('flag=2 or 1')
             sess.run(train_fastrcnn,feed_dict={xs:pd,gt_rpncls:ocs,gt_rpnreg:ors,gt_clsno:no,gt_regno:rn,eval_boxes:s_boxes,gt_clsv:gtclsv,gt_regv:gtregv,gt_clsvn:clsvno,gt_regvn:regvno})
             onerpnclsloss=sess.run(rpnclsloss,feed_dict={xs:pd,gt_rpncls:ocs,gt_rpnreg:ors,gt_clsno:no,gt_regno:rn})
             onerpnregloss=sess.run(rpnregloss,feed_dict={xs:pd,gt_rpncls:ocs,gt_rpnreg:ors,gt_clsno:no,gt_regno:rn})
@@ -195,7 +195,7 @@ with tf.Session(config=config) as sess:
             #threetotalloss=sess.run(totalloss,feed_dict={xs:pd,gt_rpncls:ocs,gt_rpnreg:ors,gt_clsno:no,gt_regno:rn,eval_boxes:s_boxes,gt_clsv:gtclsv,gt_regv:gtregv,gt_clsvn:clsvno,gt_regvn:regvno,gt_ft:gtft,evalft_boxes:fs_boxes})
             #threeftloss=threetotalloss-twofhregloss-twofhclsloss-onerpnregloss-onerpnclsloss
             print(i)
-            print(onerpnclsloss,onerpnregloss,twofhclsloss,twofhregloss,threeftloss)
+            print(onerpnclsloss,onerpnregloss,twofhclsloss,twofhregloss)
         elif flag==0:
             print('no pos')
             sess.run(train_rpn,feed_dict={xs:pd,gt_rpncls:ocs,gt_rpnreg:ors,gt_clsno:no,gt_regno:rn})

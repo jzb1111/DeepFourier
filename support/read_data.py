@@ -1237,10 +1237,10 @@ def gen_train_ft_list_v2(ftlist,boxes,gld):
                 fttmp[53][1]=(fttmp[53][1]-box[1])/10'''
                 for k in range(len(fttmp)):
                     if k!=5:
-                        fttmp[k][0]=fttmp[k][0]/10
-                        fttmp[k][1]=fttmp[k][1]/10
-                fttmp[5][0]=(fttmp[5][0]-box[0])/50
-                fttmp[5][1]=(fttmp[5][1]-box[1])/50  
+                        fttmp[k][0]=fttmp[k][0]*10
+                        fttmp[k][1]=fttmp[k][1]*10
+                fttmp[5][0]=(fttmp[5][0]-box[0])/10
+                fttmp[5][1]=(fttmp[5][1]-box[1])/10 
                 ftout.append(fttmp)
                 
     return ftout
