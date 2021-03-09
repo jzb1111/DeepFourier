@@ -57,11 +57,15 @@ def fasthead_reg_loss(fasthead_regv,gt_regv,reg_no):#fasthead_regv[N,84];gt_regv
     loss=tf.reduce_mean(tf.reduce_sum(smooth_l1_loss(fasthead_regv,gt_regv),reduction_indices=1))
     return loss
 
-def fast_ft_loss(fast_ft,gt_ft):
+def fast_ft_loss(fast_ft,gt_ft,gt_ftno):
     #t_select=tf.where(tf.not_equal(gt_ftno,-1))
     #fast_ft=tf.reshape(tf.gather(fast_ft,t_select),[-1,2])
     #gt_ft=tf.reshape(tf.gather(gt_ft,t_select),[-1,2])
     fast_ft=tf.reshape(fast_ft,[-1,2])
     gt_ft=tf.reshape(gt_ft,[-1,2])
+    gt_ftno=tf.reshape(gt_ftno,[-1])
+    t_select=tf.where(tf.not_equal(gt_ftno,0))
+    fast_ft=tf.gather(fast_ft,t_select)
+    gt_ft=tf.gather(gt_ft,t_select)
     loss=tf.reduce_mean(tf.reduce_sum(tf.sqrt(tf.square(gt_ft-fast_ft)),reduction_indices=[1]))
     return loss

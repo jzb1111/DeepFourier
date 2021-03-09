@@ -14,7 +14,7 @@ from fast_head import fasthead
 from FastFt import fast_ft
 from nms_for_train import nms
 from support.get_loss import rpn_cls_loss,rpn_reg_loss,fasthead_cls_loss,fasthead_reg_loss,fast_ft_loss
-from support.read_data import generate_fasthead_train_sample,file_name,load_train_data,generate_fasthead_train_sample_v2,gen_train_ft_list,load_train_data_v2,generate_fasthead_train_data_v2,gen_train_ft_list_v2,draw_v_box_for_train
+from support.read_data import generate_fasthead_train_sample,file_name,load_train_data,generate_fasthead_train_sample_v2,gen_train_ft_list,load_train_data_v2,generate_fasthead_train_data_v2,gen_train_ft_list_v3,draw_v_box_for_train,gen_train_ft_list_v4
 import numpy as np
 import os
 #from test_model import draw_v_box_for_train
@@ -29,7 +29,7 @@ config.gpu_options.per_process_gpu_memory_fraction=0.7#分配百分之七十的�
 config.gpu_options.allow_growth = True
 lr=0.001
 
-xs=tf.placeholder(tf.float32,[1,224,224,3],name='input_xs')
+xs=tf.placeholder(tf.float32,[1,224,224,3],name='input_xs')#[1,224,224,3][N,H,W,C]
 
 eval_boxes=tf.placeholder(tf.int32,[None,4],name='boxes')
 eval_boxes=tf.reshape(eval_boxes,[-1,4])
@@ -42,6 +42,7 @@ gt_clsvn=tf.placeholder(tf.float32,[None])
 gt_regvn=tf.placeholder(tf.float32,[None,4])
 
 gt_ft=tf.placeholder(tf.float32,[None,11,2])
+gt_ftno=tf.placeholder(tf.float32,[None,11])
 #gt_ftno=tf.placeholder(tf.float32,[None,11])
 
 gt_rpncls=tf.placeholder(tf.float32,[1,14,14,9,2])
@@ -102,7 +103,7 @@ fastheadregloss=fasthead_reg_loss(regv,gt_regv,gt_regvn)
 
 fastheadloss=fastheadclsloss+fastheadregloss
 
-fastftloss=fast_ft_loss(ftv_,gt_ft)
+fastftloss=fast_ft_loss(ftv_,gt_ft,gt_ftno)
 
 totalloss=rpnloss+fastheadloss+fastftloss
 update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
@@ -137,7 +138,7 @@ with tf.Session(config=config) as sess:
         
         flag=1
         roibox=roi_box(eva_clsmap,eva_regmap)
-        s_boxes=roibox._build_model()
+        s_boxes=roibox._build_model()#[y1,x1,y2,x2]
         s_boxes=np.array(s_boxes)
         s_boxes=s_boxes.astype(np.int32)
         
@@ -147,7 +148,8 @@ with tf.Session(config=config) as sess:
         eva_fasth_reg=sess.run(regv_,feed_dict={xs:pd,eval_boxes:s_boxes})
         
         fs_boxes=draw_v_box_for_train(pd,s_boxes,eva_fasth_cls,eva_fasth_reg)
-        gtft=gen_train_ft_list_v2(ftline,fs_boxes,gld)#第50项除以50
+        #gtft=gen_train_ft_list_v3(ftline,fs_boxes)#第50项除以50
+        gtft,ftno=gen_train_ft_list_v4(ftline,fs_boxes)
         #3ftloss=sess.run(fastftloss,={xs:pd,})
         if len(gtft)==0 and flag==1:
             flag=2
@@ -174,12 +176,12 @@ with tf.Session(config=config) as sess:
             #clsvno=clsvno.astype(np.float32)
             #regvno=regvno.astype(np.float32)
             
-            sess.run(train_step,feed_dict={xs:pd,gt_rpncls:ocs,gt_rpnreg:ors,gt_clsno:no,gt_regno:rn,eval_boxes:s_boxes,gt_clsv:gtclsv,gt_regv:gtregv,gt_clsvn:clsvno,gt_regvn:regvno,gt_ft:gtft,evalft_boxes:fs_boxes})
+            sess.run(train_step,feed_dict={xs:pd,gt_rpncls:ocs,gt_rpnreg:ors,gt_clsno:no,gt_regno:rn,eval_boxes:s_boxes,gt_clsv:gtclsv,gt_regv:gtregv,gt_clsvn:clsvno,gt_regvn:regvno,gt_ft:gtft,evalft_boxes:fs_boxes,gt_ftno:ftno})
             onerpnclsloss=sess.run(rpnclsloss,feed_dict={xs:pd,gt_rpncls:ocs,gt_rpnreg:ors,gt_clsno:no,gt_regno:rn})
             onerpnregloss=sess.run(rpnregloss,feed_dict={xs:pd,gt_rpncls:ocs,gt_rpnreg:ors,gt_clsno:no,gt_regno:rn})
             twofhclsloss=sess.run(fastheadclsloss,feed_dict={xs:pd,eval_boxes:s_boxes,gt_clsv:gtclsv,gt_regv:gtregv,gt_clsvn:clsvno,gt_regvn:regvno})
             twofhregloss=sess.run(fastheadregloss,feed_dict={xs:pd,eval_boxes:s_boxes,gt_clsv:gtclsv,gt_regv:gtregv,gt_clsvn:clsvno,gt_regvn:regvno})
-            threetotalloss=sess.run(totalloss,feed_dict={xs:pd,gt_rpncls:ocs,gt_rpnreg:ors,gt_clsno:no,gt_regno:rn,eval_boxes:s_boxes,gt_clsv:gtclsv,gt_regv:gtregv,gt_clsvn:clsvno,gt_regvn:regvno,gt_ft:gtft,evalft_boxes:fs_boxes})
+            threetotalloss=sess.run(totalloss,feed_dict={xs:pd,gt_rpncls:ocs,gt_rpnreg:ors,gt_clsno:no,gt_regno:rn,eval_boxes:s_boxes,gt_clsv:gtclsv,gt_regv:gtregv,gt_clsvn:clsvno,gt_regvn:regvno,gt_ft:gtft,evalft_boxes:fs_boxes,gt_ftno:ftno})
             threeftloss=threetotalloss-twofhregloss-twofhclsloss-onerpnregloss-onerpnclsloss
             print(i)
             print(onerpnclsloss,onerpnregloss,twofhclsloss,twofhregloss,threeftloss)

@@ -5,8 +5,8 @@ Created on Thu Jul  4 18:29:14 2019
 @author: ADMIN
 """
 
-from run_model import run_rpn,run_fasthead,run_fasthead_nms
-from support.read_data import get_batch_by_num,generate_box,correct_box,load_train_data,load_raw_data_by_num
+from run_model import run_rpn,run_fasthead,run_fasthead_nms,run_fastft
+from support.read_data import get_batch_by_num,generate_box,correct_box,load_train_data,load_raw_data_by_num,split_box,draw_fourier
 from ROI_pool import roi_box
 from runNMS import run_nms
 import cv2
@@ -114,7 +114,8 @@ def draw_v_box_for_train(pd,s_box,clsv,regv):#还缺少一个nms
             cls_lis[clsvn].append(clsv[i][clsvn])
             cls_box[clsvn].append(cor_box)
     #print(cls_lis)
-    for i in range(len(cls_lis)):
+    cor_boxlis=[]
+    for i in range(1):
         if len(cls_lis[i])>0:
             boxlistmp=cls_box[i]
             conflist=cls_lis[i]
@@ -123,9 +124,8 @@ def draw_v_box_for_train(pd,s_box,clsv,regv):#还缺少一个nms
             maxoutput=10
             iouthreshold=0.2
             cor_boxlis=run_nms(boxlistmp,conflist,maxoutput,iouthreshold)
-            
-    return cor_boxlis   
-
+    cor_boxlis=split_box(cor_boxlis)       
+    return cor_boxlis  
 
 def draw_v_box_v2(pd,s_box,clsv,regv):#还缺少一个nms
     im=pd[0]
@@ -167,7 +167,7 @@ def draw_v_box_v2(pd,s_box,clsv,regv):#还缺少一个nms
                 cv2.rectangle(im,(ltw,lth),(rbw,rbh),(0,255,0),2)
     return im     
 
-num=2
+num=200
 
 #ld,pd=get_batch_by_num(num)
 #pd,ocs,ors,no,rn,gld=load_train_data(num)
@@ -199,7 +199,15 @@ rf.start()
 clsv,regv=rf.run_mod()
 
 dvb=draw_v_box_v2(pd,selected_boxes,clsv,regv)
+plt.figure(0)
 plt.imshow(dvb/255)
+
+ftboxes=draw_v_box_for_train(pd,selected_boxes,clsv,regv)
+rft=run_fastft(pd,ftboxes)
+rft.start()
+ftnum=rft.run_mod()
+
+
 #clsn,box=run_fasthead_nms(clsv,regv,selected_boxes)
 
 #draw_box(pd,boxes)

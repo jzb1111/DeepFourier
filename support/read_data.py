@@ -12,6 +12,8 @@ import cv2
 import random
 from xml.dom.minidom import parse
 import xml.dom.minidom
+import sys
+sys.path.extend(['E:\\paper\\DeepFourier4','E:/paper/DeepFourier4'])
 from runNMS import run_nms
 
 objdict={
@@ -785,8 +787,8 @@ def load_train_data(num):
     orsname='./train_data/rpn_ors_'+str(num)+'.npy'
     noname='./train_data/rpn_no_'+str(num)+'.npy'
     rnname='./train_data/rpn_rn_'+str(num)+'.npy'
-    gldname='./train_data/gld_'+str(num)+'.npy'
-    ftname='./train_data/ft_'+str(num)+'.npy'
+    gldname='./train_data/gld_'+str(num)+'.npy'#[y1,x1,y2,x2,cls]
+    ftname='./train_data/ft_'+str(num)+'.npy'#[[],[],[]]
     pd=np.load(pdname).astype(np.float32)
     ocs=np.load(ocsname).astype(np.float32)
     ors=np.load(orsname).astype(np.float32)
@@ -1196,6 +1198,7 @@ def gen_train_ft_list_v2(ftlist,boxes,gld):
     ftout=[]
     ftline=[]
     #ftcenter=[]
+    boxind=[]
     for i in range(len(ftlist)):
         fttmp=[]
         for j in range(len(ftlist[i][1][0])):
@@ -1210,40 +1213,111 @@ def gen_train_ft_list_v2(ftlist,boxes,gld):
             iou=IoU(box,gld[j])
             ioulis.append(iou)
         #iousor=sorted(ioulis,reverse=True)
+        print(ioulis)
         ind=ioulis.index(max(ioulis))
         for j in range(len(ftlist)):
             if ftlist[j][0]==ind:
                 fttmp=ftline[j]
                 #print(fttmp[50],box)
-                '''fttmp[50][0]=(fttmp[50][0]-box[0])/50
-                fttmp[50][1]=(fttmp[50][1]-box[1])/50
-                
-                fttmp[49][0]=(fttmp[49][0]-box[0])/10
-                fttmp[49][1]=(fttmp[49][1]-box[1])/10
-                
-                fttmp[51][0]=(fttmp[51][0]-box[0])/10
-                fttmp[51][1]=(fttmp[51][1]-box[1])/10
-                
-                fttmp[48][0]=(fttmp[48][0]-box[0])/10
-                fttmp[48][1]=(fttmp[48][1]-box[1])/10
-                
-                fttmp[52][0]=(fttmp[52][0]-box[0])/10
-                fttmp[52][1]=(fttmp[52][1]-box[1])/10
-                
-                fttmp[47][0]=(fttmp[47][0]-box[0])/10
-                fttmp[47][1]=(fttmp[47][1]-box[1])/10
-                
-                fttmp[53][0]=(fttmp[53][0]-box[0])/10
-                fttmp[53][1]=(fttmp[53][1]-box[1])/10'''
                 for k in range(len(fttmp)):
                     if k!=5:
-                        fttmp[k][0]=fttmp[k][0]*10
-                        fttmp[k][1]=fttmp[k][1]*10
-                fttmp[5][0]=(fttmp[5][0]-box[0])/10
-                fttmp[5][1]=(fttmp[5][1]-box[1])/10 
+                        fttmp[k][0]=fttmp[k][0]
+                        fttmp[k][1]=fttmp[k][1]
+                #fttmp[5][0]=(fttmp[5][0]-box[0])
+                #fttmp[5][1]=(fttmp[5][1]-box[1]) 
                 ftout.append(fttmp)
-                
+                boxind.append(ind)
+    print(boxind)
+    print(len(ftout))
+    ftres=np.zeros((len(ftout),11,2))
+    for i in range(len(ftout)):
+        box=boxes[boxind[i]]
+        #print(box)
+        for j in range(len(ftout[i])):
+            if j!=5:
+                ftres[i][j][0]=ftout[i][j][0]
+                ftres[i][j][1]=ftout[i][j][0]
+        ftres[i][5][0]=ftout[i][5][0]-box[0]
+        ftres[i][5][1]=ftout[i][5][1]-box[1]
+        
+            #print(ftout[i][j])
+    return ftres
+
+def gen_train_ft_list_v3(ftlist,boxes):
+    #思路整理：
+    #循环求出每个line和box的中心，一一匹配
+    #
+    ftout=[]
+    ftline=[]
+    #ftcenter=[]
+    boxind=[]
+    ftcenter=[]
+    for i in range(len(ftlist)):
+        fttmp=[]
+        for j in range(len(ftlist[i][1][0])):
+            ftr=ftlist[i][1][0][j].real
+            ftj=ftlist[i][1][0][j].imag
+            fttmp.append([ftr,ftj])
+        ftline.append(fttmp)
+        ftcenter.append(fttmp[5])
+    for i in range(len(boxes)):
+        box=boxes[i]
+        boxcenter=[(box[0]+box[2])/2,(box[1]+box[3])/2]
+        dist=[]
+        for j in range(len(ftcenter)):
+            dist.append((boxcenter[0]-ftcenter[j][0])**2+(boxcenter[1]-ftcenter[j][1])**2)
+        ind=dist.index(min(dist))
+        ft_select=ftline[ind]
+        #ft_select[5][0]-=box[0]
+        #ft_select[5][1]-=box[1]
+        ft_select[5][0]=0
+        ft_select[5][1]=0
+        ftout.append(ft_select)
+        
+            #print(ftout[i][j])
     return ftout
+
+def gen_train_ft_list_v4(ftlist,boxes):
+    #思路整理：
+    #循环求出每个line和box的中心，一一匹配
+    #
+    ftout=[]
+    
+    ftline=[]
+    #ftcenter=[]
+    ftcenter=[]
+    for i in range(len(ftlist)):
+        fttmp=[]
+        for j in range(len(ftlist[i][1][0])):
+            ftr=ftlist[i][1][0][j].real
+            ftj=ftlist[i][1][0][j].imag
+            fttmp.append([ftr,ftj])
+        ftline.append(fttmp)
+        ftcenter.append(fttmp[5])
+    for i in range(len(boxes)):
+        box=boxes[i]
+        boxcenter=[(box[0]+box[2])/2,(box[1]+box[3])/2]
+        dist=[]
+        for j in range(len(ftcenter)):
+            dist.append((boxcenter[0]-ftcenter[j][0])**2+(boxcenter[1]-ftcenter[j][1])**2)
+        ind=dist.index(min(dist))
+        ft_select=ftline[ind]
+        #ft_select[5][0]-=box[0]
+        #ft_select[5][1]-=box[1]
+        ft_select[5][0]=0
+        ft_select[5][1]=0
+        ftout.append(ft_select)
+    ftno=np.zeros((len(ftout),11))
+    for i in range(len(ftout)):
+        for j in range(11):
+            if abs(ftout[i][j][0])>1 or abs(ftout[i][j][1])>1:
+                ftno[i][j]=1
+        sjs=np.random.randint(0,11)
+        if sjs!=5:
+            ftno[i][sjs]=1
+            #print(ftout[i][j])
+    
+    return ftout,ftno
 
 def copy_ft(lis):
     res=[]
@@ -1318,3 +1392,40 @@ def draw_v_box_for_train(pd,s_box,clsv,regv):#还缺少一个nms
     cor_boxlis=split_box(cor_boxlis)       
     return cor_boxlis  
 
+def draw_fourier(cnlis,flat,size,iscomplex=True):
+    
+    cnliscom=[]
+    if iscomplex==False:
+        for i in range(len(cnlis)):
+            cnliscomtmp=[]
+            for j in range(len(cnlis[i])):
+                cnliscomtmp.append(cnlis[i][j][0]+cnlis[i][j][1]*1j)
+            cnliscom.append(cnliscomtmp)
+        cnlis=cnliscom
+    high=size[0]
+    width=size[1]
+    pic=np.zeros((high,width))
+    nlis=[0]
+    nlis+=[i+1 for i in range(int(len(cnlis[0])/2))]
+    nlis+=[-i-1 for i in range(int(len(cnlis[0])/2))]
+    nlis=sorted(nlis)
+    for n in range(len(cnlis)):
+        cnlistmp=cnlis[n]
+        for t in range(flat):
+            nowpoint=[0,0]
+            for i in range(len(cnlistmp)):
+                point_i=(cnlistmp[i]*np.e**(nlis[i]*2*np.pi*t*(1/flat)*1j)).real+nowpoint[0]
+                point_j=(cnlistmp[i]*np.e**(nlis[i]*2*np.pi*t*(1/flat)*1j)).imag+nowpoint[1]
+                nowpoint=[point_i,point_j]
+            picpoint_i=int(nowpoint[0])
+            picpoint_j=int(nowpoint[1])
+            if picpoint_i>size[0]-1:
+                picpoint_i=size[0]-1
+            if picpoint_i<0:
+                picpoint_i=0
+            if picpoint_j>size[1]-1:
+                picpoint_j=size[1]-1
+            if picpoint_j<0:
+                picpoint_j=0
+            pic[picpoint_i,picpoint_j]=1
+    return pic
