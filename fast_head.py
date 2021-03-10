@@ -34,5 +34,5 @@ class fasthead():
         return out
     
     def reg_vector(self,vector):
-        out=tc.layers.fully_connected(vector,4)
+        out=tc.layers.fully_connected(vector,4,activation_fn=None)
         return out

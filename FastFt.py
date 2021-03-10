@@ -28,7 +28,7 @@ class fast_ft():
         return out
     
     def cls_vector(self,vector):
-        out=tc.layers.fully_connected(vector,22)
+        out=tc.layers.fully_connected(vector,22,activation_fn=None)
         out=tf.reshape(out,[-1,11,2])
         #out=tf.nn.softmax(out)
         #output=tf.reshape(tf.nn.softmax(tf.reshape(output,(-1,2))),(-1,28,28,2))

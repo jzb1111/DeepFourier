@@ -1392,14 +1392,17 @@ def draw_v_box_for_train(pd,s_box,clsv,regv):#还缺少一个nms
     cor_boxlis=split_box(cor_boxlis)       
     return cor_boxlis  
 
-def draw_fourier(cnlis,flat,size,iscomplex=True):
+def draw_fourier(cnlis,flat,size,offset=100,iscomplex=True):
     
     cnliscom=[]
     if iscomplex==False:
         for i in range(len(cnlis)):
             cnliscomtmp=[]
             for j in range(len(cnlis[i])):
-                cnliscomtmp.append(cnlis[i][j][0]+cnlis[i][j][1]*1j)
+                if j==5:
+                    cnliscomtmp.append(cnlis[i][j][0]+offset+(cnlis[i][j][1]+offset)*1j)
+                else:
+                    cnliscomtmp.append(cnlis[i][j][0]+cnlis[i][j][1]*1j)
             cnliscom.append(cnliscomtmp)
         cnlis=cnliscom
     high=size[0]

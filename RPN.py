@@ -25,5 +25,5 @@ class R_P_N():
         out=tf.reshape(tf.nn.softmax(tf.reshape(out,(-1,2))),(-1,14,14,18))
         return out
     def reg_conv(self,bc):
-        out=tc.layers.conv2d(bc,36,1)
+        out=tc.layers.conv2d(bc,36,1,activation_fn=None)
         return out
