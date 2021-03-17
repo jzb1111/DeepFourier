@@ -23,7 +23,7 @@ class run_rpn():
         with tf.Graph().as_default():
             output_graph_def=tf.GraphDef()
             
-            with open('./model/rpn140000.pb',"rb") as f:
+            with open('./model/rpn60000.pb',"rb") as f:
                 output_graph_def.ParseFromString(f.read())
                 _ =tf.import_graph_def(output_graph_def,name='')
             #with tf.Session(config=self.config) as self.sess:
@@ -62,7 +62,7 @@ class run_fasthead():
         with tf.Graph().as_default():
             output_graph_def=tf.GraphDef()
             
-            with open('./model/fasthead140000.pb',"rb") as f:
+            with open('./model/fasthead60000.pb',"rb") as f:
                 output_graph_def.ParseFromString(f.read())
                 _ =tf.import_graph_def(output_graph_def,name='')
             #with tf.Session(config=self.config) as self.sess:
@@ -102,7 +102,7 @@ class run_fastft():
         with tf.Graph().as_default():
             output_graph_def=tf.GraphDef()
             
-            with open('./model/fastft140000.pb',"rb") as f:
+            with open('./model/fastft120000.pb',"rb") as f:
                 output_graph_def.ParseFromString(f.read())
                 _ =tf.import_graph_def(output_graph_def,name='')
             #with tf.Session(config=self.config) as self.sess:

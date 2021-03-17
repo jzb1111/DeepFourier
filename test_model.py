@@ -155,7 +155,7 @@ def draw_v_box_v2(pd,s_box,clsv,regv):#还缺少一个nms
             #print(boxlistmp)
             #print(conflist)
             maxoutput=10
-            iouthreshold=0.3
+            iouthreshold=0.2
             cor_boxlis=run_nms(boxlistmp,conflist,maxoutput,iouthreshold)
             for j in range(len(cor_boxlis)):
                 cor_box=cor_boxlis[j]
@@ -207,7 +207,9 @@ rft=run_fastft(pd,ftboxes)
 rft.start()
 ftnum=rft.run_mod()
 
-
+plt.figure(1)
+fpic=draw_fourier([ftnum[0]],100,[224,224],iscomplex=False)
+plt.imshow(fpic)
 #clsn,box=run_fasthead_nms(clsv,regv,selected_boxes)
 
 #draw_box(pd,boxes)

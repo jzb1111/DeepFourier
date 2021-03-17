@@ -144,16 +144,16 @@ class ROIs_v3():
         #num,hei,wid,cha=self.xs.shape
         
         rois0=self.generate_rois(self.xs0,self.boxes,128)
-        rois0=tc.layers.fully_connected(rois0,500)
+        rois0=tc.layers.fully_connected(rois0,100)
         
         rois1=self.generate_rois(self.xs1,self.boxes,256)
-        rois1=tc.layers.fully_connected(rois1,1000)
+        rois1=tc.layers.fully_connected(rois1,100)
         #print('rois1',rois1)
         rois2=self.generate_rois(self.xs2,self.boxes,512)
-        rois2=tc.layers.fully_connected(rois2,1500)
+        rois2=tc.layers.fully_connected(rois2,100)
         #print('rois2',rois2)
         rois=tf.concat([rois0,rois1,rois2],axis=1)
-        rois=tf.reshape(rois,[-1,3000])
+        rois=tf.reshape(rois,[-1,300])
         return rois
     
     def generate_rois(self,xs,boxes,channels):#boxes[N,4]
